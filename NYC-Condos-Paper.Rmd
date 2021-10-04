@@ -1,0 +1,256 @@
+---
+title: Evaluating the Difference Between Manhattan and Brooklyn in Predicting the
+  Full Market Value of New York City Condominiums
+author: "Tomas Meade and Logan Hyde, statistical analysis by Tomas Meade"
+output:
+  pdf_document: default
+  bookdown::html_document2: default
+  bookdown::pdf_document2: default
+---
+
+\newpage
+
+# Abstract
+New York City is one of the most popular markets for condominiums in the world. Because of its global relevance and geographic location, many choose to move to the metropolitan center. In this paper, we sought to understand the difference between the full market value of condominiums in Brooklyn and Manhattan, because real estate finance places a large emphasis on location. To do so, we created a bootstrap confidence interval for the coefficient of Brooklyn’s Borough variable in our multiple linear regression model with Manhattan as our reference variable.  In our analysis, when holding estimated gross income, total units, gross square feet, and estimated expenses constant, we found a 95% confidence interval indicating that Brooklyn is between $159500.40 and $455671.80 more expensive than Manhattan. This was a surprise to us, because Manhattan is widely known to be the most expensive borough in New York City. This is supported by the fact that in 2021 the top ten most expensive neighborhoods in the city are all located in Manhattan (Weaver).
+
+
+# Introduction
+The full market value of any condominium is influenced by a number of factors.  One factor, however, has proven to be the golden standard in terms of valuing real estate: location.  Manhattan has long been considered the end-all be-all of New York City.  However, Brooklyn has become increasingly popular, particularly among recent college graduates.  For this reason, we wish to quantify the relationship between Brooklyn and full market value compared to Manhattan.
+
+# Methods
+To conduct our analysis we first created a new borough variable from the Boro-Block-Lot variable to single out only the borough of each observation. We then removed all observations other than the ones located in Manhattan and Brooklyn leaving us with a total of 162 observations in the dataset. Using the key predictor variables given by borough location, estimated gross income, total units, gross square feet, and estimated expenses, we constructed a MLR model to examine their relationship to the full market value of condominiums. We chose these variables based on our own intuition and knowledge of what determines condominium price. Table \@ref(tab:tab1) below shows each variable's coefficient and P-value in an SLR model with the outcome variable full market value. Each variable had a small P-value that would be considered significant using any reasonable alpha-level. To examine the borough variable more in depth, a bootstrap confidence interval was constructed to estimate the borough location coefficient in the MLR model. This allowed us to look at the difference between condominiums located in Manhattan and the ones located in Brooklyn while accounting for the other key predictors of market value.
+
+```{r, include=FALSE}
+
+#Import packages
+library(tidyverse)
+library(broom)
+library(knitr)
+library(dplyr)
+
+#Read in data
+condos <- read_csv("nyc-condos.csv")
+
+#Create new column with only borough and convert to factor
+condos$Boro <- substr(condos$`Boro-Block-Lot`, 0, 1)
+
+condos$Boro <- factor(condos$Boro)
+
+#Check amount of observations in each borough
+sum(condos$Boro == "1")
+sum(condos$Boro == "2")
+sum(condos$Boro == "3")
+sum(condos$Boro == "4")
+sum(condos$Boro == "5")
+
+#Remove all observations except those in Manhatten and Brooklyn
+condos = filter(condos, Boro != "2" & Boro != "4" & Boro != "5")
+
+#Variables of Interest:
+#EstGrossIncome
+#TotalUnits
+#GrossSqFt
+#EstimatedExpense
+#Boro
+
+```
+
+```{r, include=FALSE}
+
+#Full MLR model
+full <- lm(FullMarketValue ~ EstGrossIncome + TotalUnits + GrossSqFt + EstimatedExpense + Boro, data = condos)
+summary(full)
+
+```
+
+```{r, include=FALSE}
+
+#Scatter plot and SLR model for EstGrossIncome
+condos %>% ggplot(aes(x=EstGrossIncome, y=FullMarketValue)) + geom_point()
+
+slrIncome <- lm(FullMarketValue ~ EstGrossIncome, data = condos)
+summary(slrIncome)
+
+```
+
+```{r, include=FALSE}
+
+#Scatter plot and SLR model for GrossSqFt
+condos %>% ggplot(aes(x=GrossSqFt, y=FullMarketValue)) + geom_point()
+
+slrSqFt <- lm(FullMarketValue ~ GrossSqFt, data = condos)
+summary(slrSqFt)
+
+```
+
+```{r, include=FALSE}
+
+#Scatter plot and SLR model for EstimatedExpense
+condos %>% ggplot(aes(x=EstimatedExpense, y=FullMarketValue)) + geom_point()
+
+slrExpense <- lm(FullMarketValue ~ EstimatedExpense, data = condos)
+summary(slrExpense)
+
+```
+
+```{r, include=FALSE}
+
+#Scatter plot and SLR model for TotalUnits
+condos %>% ggplot(aes(x=TotalUnits, y=FullMarketValue)) + geom_point()
+
+slrUnits <- lm(FullMarketValue ~ TotalUnits, data = condos)
+summary(slrUnits)
+
+```
+
+```{r, include=FALSE}
+
+#Scatter plot and SLR model for Boro
+condos %>% ggplot(aes(x=Boro, y=FullMarketValue)) + geom_point()
+
+slrBoro <- lm(FullMarketValue ~ Boro, data = condos)
+summary(slrBoro)
+
+```
+
+
+```{r, include=FALSE}
+
+
+#Create easily accesable summary statistics for SLR models
+slrIncomeM <- tidy(slrIncome)
+
+slrSqFtM <- tidy(slrSqFt)
+
+slrUnitsM <- tidy(slrUnits)
+
+slrExpenseM <- tidy(slrExpense)
+
+slrBoroM <- tidy(slrBoro)
+
+#Create dataframe of summary statistics for SLR models
+
+Variable <- c('EstGrossIncome','TotalUnits','GrossSqFt', 'EstimatedExpense', 'Boro')
+
+           
+Coefficient <- c(round(as.numeric(slrIncomeM[2, "estimate"]), digits = 2), 
+                 round(as.numeric(slrUnitsM[2, "estimate"]), digits = 2), 
+                 round(as.numeric(slrSqFtM[2, "estimate"]), digits = 2), 
+                 round(as.numeric(slrExpenseM[2, "estimate"]), digits = 2),
+                 round(as.numeric(slrBoroM[2, "estimate"]), digits = 2))
+
+
+P_value <- c(round(as.numeric(slrIncomeM[2, "p.value"]), digits = 3), 
+             round(as.numeric(slrUnitsM[2, "p.value"]), digits = 3), 
+             round(as.numeric(slrSqFtM[2, "p.value"]), digits = 3), 
+             round(as.numeric(slrExpenseM[2, "p.value"]), digits = 3),
+             round(as.numeric(slrBoroM[2, "p.value"]), digits = 6))
+
+Intercept <- c(round(as.numeric(slrIncomeM[1, "estimate"]), digits = 2), 
+                 round(as.numeric(slrUnitsM[1, "estimate"]), digits = 2), 
+                 round(as.numeric(slrSqFtM[1, "estimate"]), digits = 2), 
+                 round(as.numeric(slrExpenseM[1, "estimate"]), digits = 2),
+                 round(as.numeric(slrBoroM[1, "estimate"]), digits = 2))
+
+
+
+slr.df <- data.frame(Variable, Coefficient, Intercept, P_value)
+
+names(slr.df)[names(slr.df) == "P_value"] <- "Approximate p-value"
+
+
+```
+
+
+```{r tab1, echo=FALSE}
+#Create table of summary statistics for SLR models
+kable(slr.df, caption = 'Each row represents an SLR model with the key predictor variable and the outcome variable full market value. Each predictor variable is listed along with its associated coefficient, intercept and p-value.', format = "markdown")
+
+```
+
+
+# Results
+Our 95% bootstrap confidence interval was (159500.4 455671.8).  Intuitively, this is means that we are 95% confident that Brooklyn is between $159500.40 and $455671.80 more expensive than Manhattan when estimated gross income, total units, gross square feet, and estimated expenses are constant (See Figure \@ref(fig:fig1)).  This is the opposite of what we expected to find, considering Manhattan is generally thought of as the most popular borough.  Also, when we created a single linear regression of full market value on Brooklyn’s borough variable, we found the coefficient estimate to be -24021918, meaning that we should expect a $24021918 decrease in full market value when a condominium is in Brooklyn instead of Manhattan.  This model had a small p-value of 1.25e-05, so we know this result is statistically significant when using any reasonable alpha level.  This may contradict our bootstrap interval, but it is very possible that estimated gross income, total units, gross square feet, and estimated expenses are important factors that vary greatly in different boroughs, so when they are held constant, a different relationship is exposed.
+
+
+
+
+
+```{r fig1, echo=FALSE, fig.width=5,fig.height=4,fig.cap="\\label{fig:figs} Bootstrap Confidence Interval for the coefficient of borough location in the MLR model. The red dotted lines represent the bootstrap confidence interval and the green dotted line represents the estimate of the borough coefficient from the MLR model."}
+
+# Function to get one bootstrap sample
+# Inputs: data and number of observations you want in your bootstrap sample
+
+resample <- function(data, resample_size) 
+{
+                    ## Randomly choose resample_size integers from 1 to the total number of rows in the data:
+                    row_numbers <- sample.int(nrow(data), size=resample_size, replace=TRUE)
+                    ## Create a data frame with those rows from the original data:
+                    resample_data <- data[row_numbers,]
+  return(resample_data)
+}
+
+
+# Set seed for reproducibility:
+set.seed(16)
+
+
+# Fit the model on it to get our slope estimates, and replicate that 1,000 times:
+Results <- replicate(1000, 
+                     lm(FullMarketValue ~ Boro + EstGrossIncome + TotalUnits + GrossSqFt + EstimatedExpense, 
+                        data = resample(condos, resample_size=nrow(condos)))$coefficients)
+
+# Transpose it
+Boot_Res <- data.frame(t(Results))
+
+# Calculate the mean, median, variance, std. deviation, etc. of these results:
+Boro_Res <- with(Boot_Res, c(mean=mean(Boro3),
+                            median = median(Boro3),
+                            variance = var(Boro3),
+                            stdev = sd(Boro3)))
+                
+
+# Get confidence intervals using the quantile function:
+Boro_CI <- quantile(Boot_Res$Boro3, probs=c(0.025, 0.975))
+
+
+# Plot a histogram of the bootstrap estimates with labels for the median, and the 95% CI of our observed estimate.
+BS_Ests <- Boot_Res %>% ggplot(aes(x = Boro3)) + 
+  geom_histogram(bins=30) + 
+  geom_vline(xintercept = full$coefficients["Boro3"], 
+             col = "green", lty = "dotted") + 
+  labs(title = "Histogram of Bootstrap Estimates for Borough Coefficient", 
+       x = expression(beta[1]), 
+       y = "Count") + 
+  theme_bw()
+
+## Add in lines with the bootstrap CI:
+BS_Ests <- BS_Ests + 
+  geom_vline(xintercept = quantile(Boot_Res$Boro, probs=c(0.025,0.975)), 
+             col = "red", 
+             lty = "dashed") + 
+  geom_label(x = 0.6, y = 200, label = "Bootstrap 95% CI", col = "red")
+
+BS_Ests
+
+```
+
+\newpage
+
+# Discussion
+We started by examining the L.I.N.E. assumptions (linearity, independence, normal distribution, equal variance).  We found that all of our variables were linear and independent.  Our residuals, however, were not normally distributed.  Many of the residuals were clustered around zero and our histogram did not look normal.  We also found that the data violated the equal variance assumption.  As a result, we were unable to perform normal based inference and instead turned to bootstrap inference. Bootstrap inference does not require the L.I.N.E. assumptions, but still allowed us to obtain an interval that estimated the relationship between full market value and being located in Brooklyn compared to Manhattan. While this means the findings are less precise, they do not carry the risk of violating assumptions that would cause our inference to be invalid. The results highlight that Manhattan may not be the preferred location, because when certain variables are held constant, Brooklyn is considerably more expensive.  This means that people will pay more for a condominium in Brooklyn if they have the same estimated gross income, total units, gross square feet, and estimated expenses.  So, it is possible that Manhattan being the golden standard of New York City living is a misconception.
+
+# Conclusion
+Real estate markets revolve around many factors.  In our paper, we wanted to examine location specifically.  Manhattan is arguably the most popular borough in New York City, but in recent years, many have started to choose Brooklyn instead.  Because these two boroughs have been in competition as of late, we thought that it would be interesting to examine the difference in full market value between condominiums located in Manhattan and the ones located in Brooklyn.  To our surprise, we found that Brooklyn is between $159500.40 and $455671.80 more expensive than Manhattan when estimated gross income, total units, gross square feet, and estimated expenses are constant.  This could mean that competition among boroughs in New York City could be increasing, and that Brooklyn might be as or more expensive than Manhattan. 
+
+
+\newpage
+
+# Reference
+
+Weaver, Shaye. “Here Are the Most Expensive Neighborhoods in NYC.”
+\begin{itemize}
+  \item[] Time Out New York, Time Out, 6 Jan. 2021,
+  \item[] www.timeout.com/newyork/news/these-are-the-new-most-expensive-neighborhoods-in-nyc-010621.
+\end{itemize}
+
