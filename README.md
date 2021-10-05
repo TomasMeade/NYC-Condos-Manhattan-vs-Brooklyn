@@ -6,4 +6,4 @@ Please read the paper PDF file to see the results of the project.
 
 See the Rmd file to see all code used in the project. 
 
-The dataset used is from NYC.gov.
+The dataset is from NYC.gov.
